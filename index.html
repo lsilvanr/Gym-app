@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gym Tracker</title>
+<style>
+body { font-family: Arial; margin: 20px; background:#f7f7f7; }
+button { padding:10px; margin:5px 0; width:100%; font-size:16px; }
+.exercise { background:white; padding:10px; margin:10px 0; border-radius:8px; }
+input { width:70px; margin:3px; }
+.small { font-size:12px; color:gray; }
+a { font-size:12px; display:block; margin-top:5px; }
+</style>
+</head>
+<body>
+
+<h2 id="title">Gym</h2>
+<div id="home"></div>
+<div id="workout" style="display:none;"></div>
+
+<script>
+const workouts = ["Upper A","Upper B","Lower A","Lower B"];
+
+function init() {
+  const home = document.getElementById("home");
+  home.innerHTML = "";
+  workouts.forEach(w=>{
+    let btn = document.createElement("button");
+    btn.innerText = w;
+    btn.onclick = ()=>openWorkout(w);
+    home.appendChild(btn);
+  });
+}
+
+function openWorkout(name){
+  document.getElementById("home").style.display="none";
+  document.getElementById("workout").style.display="block";
+  document.getElementById("title").innerText=name;
+
+  const container = document.getElementById("workout");
+  container.innerHTML = `<button onclick="goHome()">⬅ Volver</button>
+  <button onclick="addExercise('${name}')">+ Añadir ejercicio</button>`;
+
+  let data = JSON.parse(localStorage.getItem(name) || "[]");
+
+  data.forEach((ex,i)=>{
+    container.innerHTML += renderExercise(name,ex,i);
+  });
+}
+
+function renderExercise(workout,ex,index){
+  let last = ex.history?.[ex.history.length-1];
+  return `
+  <div class="exercise">
+    <b>${ex.name}</b>
+    <div class="small">${last ? "Último: "+last.weight+"kg - "+last.reps : ""}</div>
+    <input placeholder="Peso" id="w${index}">
+    <input placeholder="Reps" id="r${index}">
+    <button onclick="saveSet('${workout}',${index})">Guardar</button>
+    <input placeholder="Link YouTube" value="${ex.link||''}" 
+      onchange="saveLink('${workout}',${index},this.value)">
+    ${ex.link ? `<a href="${ex.link}" target="_blank">Ver técnica</a>`:""}
+  </div>`;
+}
+
+function addExercise(workout){
+  let name = prompt("Nombre del ejercicio:");
+  if(!name) return;
+  let data = JSON.parse(localStorage.getItem(workout)||"[]");
+  data.push({name:name, history:[], link:""});
+  localStorage.setItem(workout,JSON.stringify(data));
+  openWorkout(workout);
+}
+
+function saveSet(workout,index){
+  let data = JSON.parse(localStorage.getItem(workout));
+  let weight = document.getElementById("w"+index).value;
+  let reps = document.getElementById("r"+index).value;
+  if(!weight || !reps) return;
+  data[index].history.push({weight,reps,date:new Date()});
+  localStorage.setItem(workout,JSON.stringify(data));
+  openWorkout(workout);
+}
+
+function saveLink(workout,index,value){
+  let data = JSON.parse(localStorage.getItem(workout));
+  data[index].link=value;
+  localStorage.setItem(workout,JSON.stringify(data));
+}
+
+function goHome(){
+  document.getElementById("home").style.display="block";
+  document.getElementById("workout").style.display="none";
+  document.getElementById("title").innerText="Gym";
+}
+
+init();
+</script>
+
+</body>
+</html>
