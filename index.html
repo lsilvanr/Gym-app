@@ -7,8 +7,8 @@
 
 <style>
 body{
-  background:#1c1c1c;
-  color:white;
+  background:#ffffff;
+  color:#1c1c1c;
   font-family:Arial, sans-serif;
   margin:15px;
 }
@@ -37,11 +37,11 @@ button{
 }
 
 .exercise{
-  background:#2a2a2a;
+  background:#f9f9f9;
   padding:15px;
   margin:12px 0;
   border-radius:16px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.5);
+  box-shadow:0 2px 6px rgba(0,0,0,0.15);
 }
 
 .superset{
@@ -49,20 +49,21 @@ button{
   border-radius:16px;
   padding:10px;
   margin:15px 0;
+  background:#fefefe;
 }
 
 input{
   width:65px;
   padding:5px;
   margin:4px;
-  border:none;
+  border:1px solid #ccc;
   border-radius:6px;
   text-align:center;
 }
 
 .last{
   font-size:12px;
-  color:#bbb;
+  color:#555;
   margin-top:6px;
 }
 </style>
@@ -71,10 +72,10 @@ input{
 
 <div id="home">
   <h1>Gym Tracker</h1>
-  <button onclick="loadDay('Lower A')">Lower A</button>
-  <button onclick="loadDay('Lower B')">Lower B</button>
-  <button onclick="loadDay('Upper A')">Upper A</button>
-  <button onclick="loadDay('Upper B')">Upper B</button>
+  <button onclick="loadDay('Lower A')">1 - Lower A</button>
+  <button onclick="loadDay('Upper A')">2 - Upper A</button>
+  <button onclick="loadDay('Lower B')">3 - Lower B</button>
+  <button onclick="loadDay('Upper B')">4 - Upper B</button>
 </div>
 
 <div id="workout" style="display:none;">
@@ -195,9 +196,11 @@ div.innerHTML=`<h3>${name}</h3>`;
 
 for(let i=1;i<=3;i++){
 div.innerHTML+=`
-Serie ${i}
+<div>Serie ${i}</div>
+<div>
 Reps <input type="number" id="${name}-r${i}">
 Peso <input type="number" id="${name}-p${i}">
+</div>
 <br>`;
 }
 
