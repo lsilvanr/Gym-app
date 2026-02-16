@@ -1,100 +1,283 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gym Tracker</title>
+
 <style>
-body { font-family: Arial; margin: 20px; background:#f7f7f7; }
-button { padding:10px; margin:5px 0; width:100%; font-size:16px; }
-.exercise { background:white; padding:10px; margin:10px 0; border-radius:8px; }
-input { width:70px; margin:3px; }
-.small { font-size:12px; color:gray; }
-a { font-size:12px; display:block; margin-top:5px; }
+body{
+  background:#1c1c1c;
+  color:white;
+  font-family:Arial, sans-serif;
+  margin:15px;
+}
+
+h1{
+  text-align:center;
+  color:#ff4da6;
+}
+
+h2{
+  margin-top:25px;
+  color:#ff4da6;
+}
+
+button{
+  padding:12px;
+  margin:8px 0;
+  width:100%;
+  border:none;
+  border-radius:12px;
+  background:#ff4da6;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.exercise{
+  background:#2a2a2a;
+  padding:15px;
+  margin:12px 0;
+  border-radius:16px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.5);
+}
+
+.superset{
+  border:2px solid #ff4da6;
+  border-radius:16px;
+  padding:10px;
+  margin:15px 0;
+}
+
+input{
+  width:65px;
+  padding:5px;
+  margin:4px;
+  border:none;
+  border-radius:6px;
+  text-align:center;
+}
+
+.last{
+  font-size:12px;
+  color:#bbb;
+  margin-top:6px;
+}
 </style>
 </head>
 <body>
 
-<h2 id="title">Gym</h2>
-<div id="home"></div>
-<div id="workout" style="display:none;"></div>
+<div id="home">
+  <h1>Gym Tracker</h1>
+  <button onclick="loadDay('Lower A')">Lower A</button>
+  <button onclick="loadDay('Lower B')">Lower B</button>
+  <button onclick="loadDay('Upper A')">Upper A</button>
+  <button onclick="loadDay('Upper B')">Upper B</button>
+</div>
+
+<div id="workout" style="display:none;">
+  <button onclick="goHome()">← Volver</button>
+  <h1 id="dayTitle"></h1>
+  <div id="content"></div>
+</div>
 
 <script>
-const workouts = ["Upper A","Upper B","Lower A","Lower B"];
 
-function init() {
-  const home = document.getElementById("home");
-  home.innerHTML = "";
-  workouts.forEach(w=>{
-    let btn = document.createElement("button");
-    btn.innerText = w;
-    btn.onclick = ()=>openWorkout(w);
-    home.appendChild(btn);
-  });
+const workouts = {
+
+"Lower A":{
+warmup:[
+"Puente de Glúteo",
+"Desplazamiento lateral con banda"
+],
+training:[
+"Hip Thrust",
+"Sentadilla búlgara con mancuerna",
+"Peso muerto rumano",
+"Abducción de cadera en máquina",
+"Extensión de gemelos",
+{type:"time", name:"Plancha abdominal isométrica"}
+]
+},
+
+"Lower B":{
+warmup:[
+"Puente de Glúteo",
+"Desplazamiento lateral con banda"
+],
+training:[
+"Hip Thrust",
+"Extensión de cadera baja en polea",
+"Sentadilla sumo en multipower",
+"Clamshell",
+"Curl de femoral tumbada",
+"Extensión de cuádriceps"
+]
+},
+
+"Upper A":{
+warmup:[
+"Movilidad hombro flexión",
+"Movilidad hombro extensión",
+"Movilidad completa de hombro"
+],
+training:[
+"Flexiones",
+"Jalón al pecho prono",
+"Remo agarre neutro",
+"Pull over",
+"Face pull",
+{type:"time", name:"Cardio"}
+]
+},
+
+"Upper B":{
+warmup:[
+"Movilidad hombro flexión",
+"Movilidad hombro extensión",
+"Movilidad completa de hombro"
+],
+training:[
+{type:"superset", exercises:["Dominadas asistidas en máquina","Flexiones"]},
+"Remo unilateral con mancuerna",
+"Press hombro máquina",
+"Elevaciones laterales con mancuernas",
+"Aperturas invertidas en máquina",
+{type:"time", name:"Cardio"}
+]
 }
 
-function openWorkout(name){
-  document.getElementById("home").style.display="none";
-  document.getElementById("workout").style.display="block";
-  document.getElementById("title").innerText=name;
+};
 
-  const container = document.getElementById("workout");
-  container.innerHTML = `<button onclick="goHome()">⬅ Volver</button>
-  <button onclick="addExercise('${name}')">+ Añadir ejercicio</button>`;
+function loadDay(day){
+document.getElementById("home").style.display="none";
+document.getElementById("workout").style.display="block";
+document.getElementById("dayTitle").textContent=day;
 
-  let data = JSON.parse(localStorage.getItem(name) || "[]");
+const content=document.getElementById("content");
+content.innerHTML="";
 
-  data.forEach((ex,i)=>{
-    container.innerHTML += renderExercise(name,ex,i);
-  });
-}
-
-function renderExercise(workout,ex,index){
-  let last = ex.history?.[ex.history.length-1];
-  return `
-  <div class="exercise">
-    <b>${ex.name}</b>
-    <div class="small">${last ? "Último: "+last.weight+"kg - "+last.reps : ""}</div>
-    <input placeholder="Peso" id="w${index}">
-    <input placeholder="Reps" id="r${index}">
-    <button onclick="saveSet('${workout}',${index})">Guardar</button>
-    <input placeholder="Link YouTube" value="${ex.link||''}" 
-      onchange="saveLink('${workout}',${index},this.value)">
-    ${ex.link ? `<a href="${ex.link}" target="_blank">Ver técnica</a>`:""}
-  </div>`;
-}
-
-function addExercise(workout){
-  let name = prompt("Nombre del ejercicio:");
-  if(!name) return;
-  let data = JSON.parse(localStorage.getItem(workout)||"[]");
-  data.push({name:name, history:[], link:""});
-  localStorage.setItem(workout,JSON.stringify(data));
-  openWorkout(workout);
-}
-
-function saveSet(workout,index){
-  let data = JSON.parse(localStorage.getItem(workout));
-  let weight = document.getElementById("w"+index).value;
-  let reps = document.getElementById("r"+index).value;
-  if(!weight || !reps) return;
-  data[index].history.push({weight,reps,date:new Date()});
-  localStorage.setItem(workout,JSON.stringify(data));
-  openWorkout(workout);
-}
-
-function saveLink(workout,index,value){
-  let data = JSON.parse(localStorage.getItem(workout));
-  data[index].link=value;
-  localStorage.setItem(workout,JSON.stringify(data));
+addSection("Calentamiento",workouts[day].warmup,content);
+addSection("Entrenamiento",workouts[day].training,content);
 }
 
 function goHome(){
-  document.getElementById("home").style.display="block";
-  document.getElementById("workout").style.display="none";
-  document.getElementById("title").innerText="Gym";
+document.getElementById("home").style.display="block";
+document.getElementById("workout").style.display="none";
 }
 
-init();
+function addSection(title,list,parent){
+const h=document.createElement("h2");
+h.textContent=title;
+parent.appendChild(h);
+
+list.forEach(item=>{
+if(typeof item==="string"){
+parent.appendChild(createExercise(item));
+}
+else if(item.type==="time"){
+parent.appendChild(createTimeExercise(item.name));
+}
+else if(item.type==="superset"){
+parent.appendChild(createSuperset(item.exercises));
+}
+});
+}
+
+function createExercise(name){
+
+const div=document.createElement("div");
+div.className="exercise";
+
+div.innerHTML=`<h3>${name}</h3>`;
+
+for(let i=1;i<=3;i++){
+div.innerHTML+=`
+Serie ${i}
+Reps <input type="number" id="${name}-r${i}">
+Peso <input type="number" id="${name}-p${i}">
+<br>`;
+}
+
+div.innerHTML+=`<button onclick="save('${name}','weight')">Guardar</button>
+<div class="last" id="${name}-last"></div>`;
+
+load(name,"weight");
+return div;
+}
+
+function createTimeExercise(name){
+
+const div=document.createElement("div");
+div.className="exercise";
+
+div.innerHTML=`
+<h3>${name}</h3>
+Minutos <input type="number" id="${name}-time">
+<button onclick="save('${name}','time')">Guardar</button>
+<div class="last" id="${name}-last"></div>
+`;
+
+load(name,"time");
+return div;
+}
+
+function createSuperset(exercises){
+
+const container=document.createElement("div");
+container.className="superset";
+container.innerHTML="<h3>Superserie</h3>";
+
+exercises.forEach(name=>{
+container.appendChild(createExercise(name));
+});
+
+return container;
+}
+
+function save(name,type){
+
+let data;
+
+if(type==="weight"){
+data=[
+{r:v(name+"-r1"),p:v(name+"-p1")},
+{r:v(name+"-r2"),p:v(name+"-p2")},
+{r:v(name+"-r3"),p:v(name+"-p3")}
+];
+}
+else{
+data=v(name+"-time");
+}
+
+localStorage.setItem(name,JSON.stringify(data));
+load(name,type);
+}
+
+function load(name,type){
+
+const saved=localStorage.getItem(name);
+if(!saved) return;
+
+const data=JSON.parse(saved);
+let text="Último: ";
+
+if(type==="weight"){
+text+=data.map(d=>`${d.r}x${d.p}`).join(" | ");
+}
+else{
+text+=data+" min";
+}
+
+document.getElementById(name+"-last").textContent=text;
+}
+
+function v(id){
+return document.getElementById(id).value;
+}
+
 </script>
 
 </body>
