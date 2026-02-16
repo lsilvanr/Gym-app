@@ -66,6 +66,8 @@ input{
   color:#555;
   margin-top:6px;
 }
+
+.hidden{ display:none; }
 </style>
 </head>
 <body>
@@ -76,6 +78,7 @@ input{
   <button onclick="loadDay('Upper A')">2 - Upper A</button>
   <button onclick="loadDay('Lower B')">3 - Lower B</button>
   <button onclick="loadDay('Upper B')">4 - Upper B</button>
+  <button onclick="showHistory()">📅 Historial</button>
 </div>
 
 <div id="workout" style="display:none;">
@@ -255,10 +258,19 @@ else{
 data=v(name+"-time");
 }
 
+// Guardar datos en localStorage
 localStorage.setItem(name,JSON.stringify(data));
 load(name,type);
+
+// Guardar historial por fecha
+const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+let hist = JSON.parse(localStorage.getItem('historial')) || {};
+if(!hist[today]) hist[today] = {};
+hist[today][name] = data;
+localStorage.setItem('historial', JSON.stringify(hist));
 }
 
+// Cargar datos previos
 function load(name,type){
 
 const saved=localStorage.getItem(name);
@@ -275,6 +287,53 @@ text+=data+" min";
 }
 
 document.getElementById(name+"-last").textContent=text;
+}
+
+// Mostrar historial
+function showHistory(){
+document.getElementById("home").style.display="none";
+document.getElementById("workout").style.display="block";
+document.getElementById("dayTitle").textContent="📅 Historial";
+const content = document.getElementById("content");
+content.innerHTML="";
+
+const hist = JSON.parse(localStorage.getItem('historial')) || {};
+const dates = Object.keys(hist).sort().reverse();
+
+if(dates.length === 0){
+    content.innerHTML="<p>No hay entrenamientos guardados.</p>";
+    return;
+}
+
+dates.forEach(date=>{
+    const dayDiv = document.createElement("div");
+    dayDiv.style.border="1px solid #ff4da6";
+    dayDiv.style.borderRadius="12px";
+    dayDiv.style.margin="10px 0";
+    dayDiv.style.padding="8px";
+    const toggleId = "toggle-"+date;
+    dayDiv.innerHTML = `<h3 style="cursor:pointer;color:#ff4da6;" onclick="document.getElementById('${toggleId}').classList.toggle('hidden')">${date}</h3>
+    <div id="${toggleId}" class="hidden">`;
+
+    const exercises = hist[date];
+    for(let ex in exercises){
+        let val = exercises[ex];
+        if(Array.isArray(val)){
+            dayDiv.innerHTML += `<b>${ex}</b>: ${val.map(d=>`${d.r}x${d.p}`).join(" | ")}<br>`;
+        } else {
+            dayDiv.innerHTML += `<b>${ex}</b>: ${val} min<br>`;
+        }
+    }
+
+    dayDiv.innerHTML += "</div>";
+    content.appendChild(dayDiv);
+});
+
+// Permite volver al home desde historial
+const back = document.createElement("button");
+back.textContent = "← Volver";
+back.onclick = goHome;
+content.insertBefore(back, content.firstChild);
 }
 
 function v(id){
