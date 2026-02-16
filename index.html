@@ -155,7 +155,10 @@ training:[
 
 };
 
+let currentDay = "";
+
 function loadDay(day){
+currentDay = day;
 document.getElementById("home").style.display="none";
 document.getElementById("workout").style.display="block";
 document.getElementById("dayTitle").textContent=day;
@@ -165,6 +168,12 @@ content.innerHTML="";
 
 addSection("Calentamiento",workouts[day].warmup,content);
 addSection("Entrenamiento",workouts[day].training,content);
+
+// Botón de guardar entrenamiento al final
+const saveBtn = document.createElement("button");
+saveBtn.textContent = "💾 Guardar Entrenamiento";
+saveBtn.onclick = saveWorkout;
+content.appendChild(saveBtn);
 }
 
 function goHome(){
@@ -207,26 +216,36 @@ Peso <input type="number" id="${name}-p${i}">
 <br>`;
 }
 
-div.innerHTML+=`<button onclick="save('${name}','weight')">Guardar</button>
-<div class="last" id="${name}-last"></div>`;
+div.innerHTML+=`<div class="last" id="${name}-last"></div>`;
 
-load(name,"weight");
+loadWeight(name);
 return div;
 }
 
 function createTimeExercise(name){
 
-const div=document.createElement("div");
-div.className="exercise";
+const div = document.createElement("div");
+div.className = "exercise";
 
-div.innerHTML=`
-<h3>${name}</h3>
-Minutos <input type="number" id="${name}-time">
-<button onclick="save('${name}','time')">Guardar</button>
-<div class="last" id="${name}-last"></div>
-`;
+div.innerHTML = `<h3>${name}</h3>`;
 
-load(name,"time");
+if(name.toLowerCase().includes("plancha")){
+  for(let i=1;i<=3;i++){
+    div.innerHTML += `
+      <div>Serie ${i}</div>
+      <div>
+        Minutos <input type="number" id="${name}-t${i}">
+      </div><br>
+    `;
+  }
+} else {
+  div.innerHTML += `
+    Minutos <input type="number" id="${name}-time"><br>
+  `;
+}
+
+div.innerHTML += `<div class="last" id="${name}-last"></div>`;
+loadTime(name);
 return div;
 }
 
@@ -243,50 +262,71 @@ container.appendChild(createExercise(name));
 return container;
 }
 
-function save(name,type){
+// Guardar todo el entrenamiento
+function saveWorkout(){
+const day = currentDay;
+const items = document.querySelectorAll(".exercise");
+const today = new Date().toISOString().split('T')[0];
 
-let data;
-
-if(type==="weight"){
-data=[
-{r:v(name+"-r1"),p:v(name+"-p1")},
-{r:v(name+"-r2"),p:v(name+"-p2")},
-{r:v(name+"-r3"),p:v(name+"-p3")}
-];
-}
-else{
-data=v(name+"-time");
-}
-
-// Guardar datos en localStorage
-localStorage.setItem(name,JSON.stringify(data));
-load(name,type);
-
-// Guardar historial por fecha
-const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 let hist = JSON.parse(localStorage.getItem('historial')) || {};
 if(!hist[today]) hist[today] = {};
-hist[today][name] = data;
+
+items.forEach(div=>{
+const name = div.querySelector("h3").textContent;
+
+// Cardio o planchas con series
+if(div.querySelector("#"+name+"-time") || div.querySelector("#"+name+"-t1")){
+  let data;
+  if(div.querySelector("#"+name+"-t1")){
+    data = [];
+    for(let i=1;i<=3;i++){
+      const t = document.getElementById(name+"-t"+i).value;
+      data.push({t});
+    }
+  } else {
+    const t = document.getElementById(name+"-time").value;
+    data = t;
+  }
+  localStorage.setItem(name,JSON.stringify(data));
+  hist[today][name] = data;
+} else {
+  // Series con peso
+  let data = [];
+  for(let i=1;i<=3;i++){
+    const r = document.getElementById(name+"-r"+i).value;
+    const p = document.getElementById(name+"-p"+i).value;
+    data.push({r,p});
+  }
+  localStorage.setItem(name,JSON.stringify(data));
+  hist[today][name] = data;
+}
+});
+
 localStorage.setItem('historial', JSON.stringify(hist));
+alert("✅ Entrenamiento guardado!");
+loadDay(day); // recarga los valores guardados
 }
 
-// Cargar datos previos
-function load(name,type){
-
-const saved=localStorage.getItem(name);
-if(!saved) return;
-
-const data=JSON.parse(saved);
-let text="Último: ";
-
-if(type==="weight"){
-text+=data.map(d=>`${d.r}x${d.p}`).join(" | ");
-}
-else{
-text+=data+" min";
+function loadWeight(name){
+  const saved = localStorage.getItem(name);
+  if(!saved) return;
+  const data = JSON.parse(saved);
+  if(!Array.isArray(data)) return;
+  let text = "Último: " + data.map(d=>`${d.r}x${d.p}`).join(" | ");
+  document.getElementById(name+"-last").textContent = text;
 }
 
-document.getElementById(name+"-last").textContent=text;
+function loadTime(name){
+  const saved = localStorage.getItem(name);
+  if(!saved) return;
+  const data = JSON.parse(saved);
+  let text = "Último: ";
+  if(Array.isArray(data)){
+    text += data.map(d=>d.t).join(" | ") + " min";
+  } else {
+    text += data + " min";
+  }
+  document.getElementById(name+"-last").textContent = text;
 }
 
 // Mostrar historial
@@ -319,7 +359,9 @@ dates.forEach(date=>{
     for(let ex in exercises){
         let val = exercises[ex];
         if(Array.isArray(val)){
-            dayDiv.innerHTML += `<b>${ex}</b>: ${val.map(d=>`${d.r}x${d.p}`).join(" | ")}<br>`;
+            if(val[0].r) val = val.map(d=>`${d.r}x${d.p}`);
+            else val = val.map(d=>`${d.t} min`);
+            dayDiv.innerHTML += `<b>${ex}</b>: ${val.join(" | ")}<br>`;
         } else {
             dayDiv.innerHTML += `<b>${ex}</b>: ${val} min<br>`;
         }
@@ -329,7 +371,7 @@ dates.forEach(date=>{
     content.appendChild(dayDiv);
 });
 
-// Permite volver al home desde historial
+// Botón volver al home
 const back = document.createElement("button");
 back.textContent = "← Volver";
 back.onclick = goHome;
